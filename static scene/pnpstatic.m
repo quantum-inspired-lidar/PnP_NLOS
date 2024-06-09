@@ -55,6 +55,7 @@ while (iter <= miniter) || ((iter <= maxiter))
         Ax(:,:,:,i) = forwardmodel(x(:,:,:,i),pada,fpsf,mask(:,:,:,i),bin,N); 
         normsqdx(1,i) = sum( (x(:,:,:,i) - xprevious(:,:,:,i)).^2 ,"all");
 
+        % update alpha.   Ref: Zachary T Harmany et al. IEEE Transactions on Image Processing 21, 3, 1084–1096, 2011.
         gamma(1,i) = sum((Ax(:,:,:,i) - Axprevious(:,:,:,i)).^2,"all");
         if gamma(1,i) == 0
             alpha(1,i) = alphamin;
@@ -104,35 +105,9 @@ function   Ax = forwardmodel(x,pada,fpsf,mask,bin,N)
     pada(bin/2+1:bin*1.5,N/2:N*1.5-1,N/2:N*1.5-1) = x;
     fs = ifftshift(fftn(fftshift(pada)));  
     sb = ifftshift(ifftn(fftshift(fs.*fpsf))); 
-    sb = real(sb(bin/2+1:bin*1.5,N/2:N*1.5-1,N/2:N*1.5-1));  %从结果中取出中间那块，大小等于small
+    sb = real(sb(bin/2+1:bin*1.5,N/2:N*1.5-1,N/2:N*1.5-1));  
     Ax= sb.*mask;
 
 end
 
 
-function [accuracy,deprmse] = depthevaluate(vol,scene)  
-    for i = 1:128
-        for j = 1:128
-            [sceneref(i,j),scenedep(i,j)] =  max(squeeze(scene(:,i,j)));
-        end
-    end
-    sceneref = sceneref/max(sceneref(:));
-    indscene = sceneref>0.1;
-    
-    for i = 1:128
-        for j = 1:128
-            [front(i,j),dep(i,j)] =  max(squeeze(vol(:,i,j)));
-        end
-    end
-    front = front/max(front(:));
-    indfront = front>0.1;
-
-    nullpix = (indscene+indfront == 0);
-    exits = logical(indscene.*indfront);
-    ind = logical( (abs(dep-scenedep)<10).*exits); % 
-    accuracy = (sum(nullpix(:))+sum(ind(:)))/16384;
-    numerd = round(sum(ind(:))*0.75);
-    erd = sort( abs(dep(ind)-scenedep(ind)) );
-    erd = erd(1:numerd);
-    deprmse = sqrt(sum(erd.^2,'all')/numerd )*0.48; %cm
-end
